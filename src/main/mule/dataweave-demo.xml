@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7dfb0865-add2-4e38-9224-a80df1fb0cc8" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="dataweave-demoFlow" doc:id="52b5b321-1a29-447f-a181-fc5575aa5ec6" >
+		<scheduler doc:name="Scheduler" doc:id="ae81bd44-96df-4f59-b882-fea4f4a08cb7" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="30" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="Transform Message" doc:id="efdca797-3bf0-4bf8-b8b6-0c1264ca759e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from modules::Utility
+output application/json
+---
+myFunc("dataweave") ++ "name"
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="1cb0f852-981b-4505-8a5b-f7c558144e0e" message="#[vars.code]"/>
+	</flow>
+	<flow name="dataweave-demoFlow1" doc:id="bf6208c4-06c7-496b-b166-4b7bbb899b34" >
+		<http:listener doc:name="/dataweave" doc:id="76b4d349-858a-4f8f-b9a4-93340cad3c9a" config-ref="HTTP_Listener_config" path="/dataweave"/>
+		<set-payload value='#[[&#10;{"firstname": "Kaushik", &#10; "lastname": "Banerjee"},&#10;{"firstname": "Nivedita",&#10; "lastname": "Banerjee"},&#10;{"firstname": "Kanishka",&#10; "lastname": "Banerjee"}&#10;]]' doc:name="names" doc:id="04ebde13-f1bb-4f86-9fe3-ea97ac67760b" />
+		<ee:transform doc:name="JSON to XML" doc:id="0ba3c0da-ff28-4dc3-b99e-d39f7d85534b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+users: {(payload map (object, index) -> {
+	user: {
+		"fname": object.firstname,
+		"lname": object.lastname
+	}
+}
+
+)}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="XML to JSON" doc:id="89b33013-f27c-4845-8ffd-3f343c0598da" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.users.*user map (object, index) -> {
+	firstname: object.fname,
+	lastname: object.lname
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
